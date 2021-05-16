@@ -1,11 +1,12 @@
 import mediafile
 from mutagen.id3._frames import POPM
 
-from beetsplug.banshee import Mp3BansheeScaler
+from beetsplug.banshee import Mp3BansheeScaler, Mp3MusicBeeScaler
 from beetsplug.mm import Mp3MediaMonkeyScaler
-from beetsplug.scaler import (Mp3BeetsScaler, Mp3MusicBeeScaler,
-                              Mp3QuodlibetScaler, Mp3WinampScaler)
+from beetsplug.scaler import (Mp3BeetsScaler, Mp3QuodlibetScaler,
+                              Mp3WinampScaler)
 from beetsplug.wmp import Mp3WindowsMediaPlayerScaler
+
 
 class MP3UserRatingStorageStyle(mediafile.MP3StorageStyle):
     """
@@ -25,10 +26,10 @@ class MP3UserRatingStorageStyle(mediafile.MP3StorageStyle):
         self._log = kwargs.get('_log')
         self._is_external = kwargs.get('_is_external')
         super(MP3UserRatingStorageStyle, self).__init__(self.TAG)
-        # if self._is_external:
-        self.scalers = MP3UserRatingStorageStyle._KNOWN_EXTERNAL_SCALERS
-        # else:
-        #     self.scalers = [Mp3BeetsScaler()]
+        if self._is_external:
+            self.scalers = MP3UserRatingStorageStyle._KNOWN_EXTERNAL_SCALERS
+        else:
+            self.scalers = [Mp3BeetsScaler()]
 
     def get(self, mutagen_file):
         # Create a map of all our email -> rating entries

@@ -8,8 +8,8 @@ class Mp3BansheeScaler(Scaler):
     source: https://gitlab.gnome.org/GNOME/banshee/blob/master/src/Core/Banshee.Core/Banshee.Streaming/StreamRatingTagger.cs#L66-67
     """
 
-    def __init__(self):
-        super(Mp3BansheeScaler, self).__init__('Banshee')
+    def __init__(self, name='Banshee'):
+        super(Mp3BansheeScaler, self).__init__(name)
 
     def scale(self, popm_value):
         if popm_value <= 0:
@@ -38,3 +38,8 @@ class Mp3BansheeScaler(Scaler):
         if userrating_value == 10:
             return 255
         return 0
+
+
+class Mp3MusicBeeScaler(Mp3BansheeScaler):
+    def __init__(self):
+        super(Mp3MusicBeeScaler, self).__init__('MusicBee')

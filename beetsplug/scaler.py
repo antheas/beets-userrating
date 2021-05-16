@@ -50,7 +50,3 @@ class Mp3WinampScaler(Scaler):
 class Mp3BeetsScaler(Scaler):
     def __init__(self):
         super(Mp3BeetsScaler, self).__init__('rating@beets.io')
-
-class Mp3MusicBeeScaler(Scaler):
-    def __init__(self):
-        super(Mp3MusicBeeScaler, self).__init__('MusicBee')
