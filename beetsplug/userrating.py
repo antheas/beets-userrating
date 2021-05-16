@@ -11,9 +11,8 @@
 # The above copyright notice and this permission notice shall be
 # included in all copies or substantial portions of the Software.
 
-from beets import mediafile
-from beets import plugins
-from beets import ui
+import mediafile
+from beets import plugins, ui
 from beets.dbcore import types
 from beets.dbcore.types import Integer
 from beets.library import Item
@@ -21,7 +20,8 @@ from mutagen.id3._frames import POPM
 
 from beetsplug.banshee import Mp3BansheeScaler
 from beetsplug.mm import Mp3MediaMonkeyScaler
-from beetsplug.scaler import Mp3QuodlibetScaler, Mp3WinampScaler, Mp3BeetsScaler
+from beetsplug.scaler import (Mp3BeetsScaler, Mp3MusicBeeScaler,
+                              Mp3QuodlibetScaler, Mp3WinampScaler)
 from beetsplug.wmp import Mp3WindowsMediaPlayerScaler
 
 
@@ -121,7 +121,9 @@ class UserRatingsPlugin(plugins.BeetsPlugin):
         """
         Add rating info to items of ``task`` during import.
         """
-        opts = object()
+        class Object(object):
+            pass
+        opts = Object()
         opts.imported = True
         opts.update = False
         opts.overwrite = False
@@ -165,9 +167,9 @@ class UserRatingsPlugin(plugins.BeetsPlugin):
         # Get any rating already in the file
         rating = item.userrating if 'userrating' in item else None
         self._log.debug(u'Found rating value "{0}"', rating)
-        if 'externalrating' in item:
-            imported_rating = item.externalrating
-            self._log.debug(u'Found external rating value "{0}"', imported_rating)
+        imported_rating = item.externalrating if 'externalrating' in item else None
+        self._log.debug(u'Found external rating value "{0}"', imported_rating)
+        if imported_rating:
             if not rating or opts.overwrite:
                 item.userrating = int(imported_rating)
                 if should_write and item.try_write():
@@ -199,7 +201,7 @@ class MP3UserRatingStorageStyle(mediafile.MP3StorageStyle):
     """
     A codec for MP3 user ratings in files.
 
-    Since we chose to use POPM as our baseline,, we don't have to do
+    Since we chose to use POPM as our baseline, we don't have to do
     any conversion, just look for the various possible tags
 
     """
@@ -207,7 +209,7 @@ class MP3UserRatingStorageStyle(mediafile.MP3StorageStyle):
 
     _KNOWN_EXTERNAL_SCALERS = [Mp3WindowsMediaPlayerScaler(), Mp3MediaMonkeyScaler(), Mp3BansheeScaler(),
                                Mp3QuodlibetScaler(),
-                               Mp3WinampScaler()]
+                               Mp3WinampScaler(), Mp3MusicBeeScaler()]
 
     def __init__(self, **kwargs):
         self._log = kwargs.get('_log')
@@ -221,10 +223,6 @@ class MP3UserRatingStorageStyle(mediafile.MP3StorageStyle):
     def get(self, mutagen_file):
         # Create a map of all our email -> rating entries
         user_ratings = {frame.email: frame.rating for frame in mutagen_file.tags.getall(self.TAG)}
-        if len(user_ratings) > 0:
-            self._log.info("found raw ratings:")
-            for rating_id, rating_value in user_ratings.items():
-                self._log.info("%30s:%5s" % (rating_id, rating_value))
         for scaler in self.scalers:
             key = scaler.known(user_ratings)
             if key is not None:
@@ -268,8 +266,8 @@ class UserRatingStorageStyle(mediafile.StorageStyle):
     popm_order = ["no@email", "Windows Media Player 9 Series", "rating@winamp.com", "", "Banshee"]
 
     def get(self, mutagen_file):
-        tag = self.TAG
-        return next((int(float(mutagen_file.get(tag)[0]) * 255) for tag in self.popm_order if
+        max_value = 100 if 'audio/flac' in mutagen_file.mime else 255
+        return next((int(float(mutagen_file.get(tag)[0]) / max_value * 10) for tag in self.popm_order if
                      mutagen_file.tags.get(self.TAG) is not None),
                     None)
 
@@ -279,7 +277,7 @@ class UserRatingStorageStyle(mediafile.StorageStyle):
     def set(self, mutagen_file, value):
         if value is not None:
             max_value = 100 if 'audio/flac' in mutagen_file.mime else 255
-            val = value / 255 * max_value
+            val = value / 10 * max_value
             for user in self.popm_order:
                 mutagen_file["RATING:{0}".format(user)] = str(val)
 
