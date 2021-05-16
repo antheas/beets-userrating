@@ -49,5 +49,6 @@ Players that are supported when importing ratings :
 | Media Monkey            |  X  |     |      | 
 | Quod libet              |  x  |     |      | 
 | Winamp                  |  x  |     |      | 
-
-
+| MusicBee                |  x  |     |  x   |
+| Amarok                  |     |     |  x   |
+| Clementine              |     |     |  x   |
