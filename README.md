@@ -38,6 +38,12 @@ Major changes are:
 - add notion of scaler to be able to adapt value for any players
 - add an import function (you can import rating on existing item of the library)
 
+### Changes from Jean-Philippe repository
+- Normalized rating styles from all types to an integer from 1-10
+- Fixed some minor issues due to deprecated code
+- Added MP3 support for MusicBee
+- Added FLAC support for Amarok, Clementine
+- Added option to export a playlist file with ratings
 ### Players supported
 
 Players that are supported when importing ratings :
@@ -52,3 +58,19 @@ Players that are supported when importing ratings :
 | MusicBee                |  x  |     |  x   |
 | Amarok                  |     |     |  x   |
 | Clementine              |     |     |  x   |
+
+### Export Playlist file with Ratings
+The android app Poweramp supports importing ratings from playlists that use
+the `#EXT-X-RATING:<n>` metadata tag.
+You can export that playlist file by modifying your config as follows:
+
+```
+plugins: userrating
+
+userrating:
+    ratings_file: '~/Music/all.m3u8'
+```
+
+And then running `beet ratingsfile`.
+The file will also be updated automatically when the database changes.
+The playlist will have paths relative to the file.

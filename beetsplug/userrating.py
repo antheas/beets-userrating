@@ -11,11 +11,15 @@
 # The above copyright notice and this permission notice shall be
 # included in all copies or substantial portions of the Software.
 
+import os
+
 import mediafile
 from beets import plugins, ui
 from beets.dbcore import types
 from beets.dbcore.types import Integer
 from beets.library import Item
+from beets.util import (bytestring_path, mkdirall, normpath, path_as_posix,
+                        sanitize_path, syspath)
 
 from .rating_styles import (AmarokRatingStorageStyle, ASFRatingStorageStyle,
                             MP3UserRatingStorageStyle, UserRatingStorageStyle)
@@ -52,7 +56,10 @@ class UserRatingsPlugin(plugins.BeetsPlugin):
             # Should we overwrite an existing entry?
             'overwrite': False,
             # Should we sync others player ratings when updating a rating
-            'sync_ratings': True
+            'sync_ratings': True,
+            # SHould we save ratings to a playlist file? (Android Poweramp)
+            'ratings_file': "",
+            'forward_slash': False
         })
 
         # Add importing ratings to the import process
@@ -84,6 +91,10 @@ class UserRatingsPlugin(plugins.BeetsPlugin):
         # and export/sync updated values.
         if 'externalrating' not in mediafile.MediaFile.__dict__:
             self.add_media_field('externalrating', externalrating_field)
+        
+        if self.config['ratings_file'].get():
+            self.register_listener(
+                "database_change", lambda lib, model: self.register_write_listener())
 
     # We do present a command, though it doesn't do anything as yet
     def commands(self):
@@ -113,7 +124,12 @@ class UserRatingsPlugin(plugins.BeetsPlugin):
             u'-a', u'--all', action='store_true',
             help=u'write rating for all known players (default is to not update any players rating but beets)',
         )
-        return [cmd]
+
+        cmd2 = ui.Subcommand(
+            'ratingsfile', help=u'write library ratings to playlist file')
+        cmd2.func = lambda lib, opts, args: self.write_ratings_file(lib)
+
+        return [cmd, cmd2]
 
     def imported(self, session, task):
         """
@@ -167,8 +183,8 @@ class UserRatingsPlugin(plugins.BeetsPlugin):
         self._log.debug(u'Found rating value "{0}"', rating)
         imported_rating = item.externalrating if 'externalrating' in item else None
         self._log.debug(u'Found external rating value "{0}"', imported_rating)
-        if imported_rating:
-            if not rating or opts.overwrite:
+        if imported_rating is not None:
+            if rating is None or opts.overwrite:
                 item.userrating = int(imported_rating)
                 if should_write and item.try_write():
                     item.store()
@@ -193,3 +209,44 @@ class UserRatingsPlugin(plugins.BeetsPlugin):
         else:
             # We should consider asking here
             self._log.info(u'skip already-rated track {0}', item.path)
+
+    def register_write_listener(self):
+        self.register_listener("cli_exit", self.write_ratings_file)
+
+    def write_ratings_file(self, lib):
+        """ Android Poweramp supports importing ratings from playlist files
+            This function writes a playlist file containing all songs with
+            metadata tag #EXT-X-RATING:<n>, where n is 1-5.
+        """
+
+        if not self.config["ratings_file"]:
+            return
+        # FIXME: Unsanitized rating file location
+        rating_file = os.path.expanduser(bytestring_path(self.config["ratings_file"].get()))
+        rating_dir = os.path.dirname(rating_file)
+        if not os.path.exists(rating_dir):
+            os.makedirs(rating_dir)
+
+        ratings = {}
+        for item in lib.items(""):
+            # Grab rating
+            userrating = None
+            if 'userrating' in item:
+                userrating = item.userrating
+            elif 'externalrating' in item:
+                userrating = item.externalrating
+            
+            # Add to dict
+            if userrating is not None:
+                item_path = os.path.relpath(item.path, rating_dir)
+                ratings[item_path] = userrating
+
+        # Write ratings to rating file
+        with open(syspath(rating_file), 'wb') as f:
+            for fn, rating in ratings.items():
+                if self.config['forward_slash'].get():
+                    fn = path_as_posix(fn)
+                f.write(b"#EXT-X-RATING:" + bytes("%d" % (rating // 2), 'utf-8') 
+                    + b"\n" + fn + b"\n")
+
+        self._log.info(u"Wrote ratings to {0}", rating_file)

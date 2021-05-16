@@ -25,10 +25,10 @@ class MP3UserRatingStorageStyle(mediafile.MP3StorageStyle):
         self._log = kwargs.get('_log')
         self._is_external = kwargs.get('_is_external')
         super(MP3UserRatingStorageStyle, self).__init__(self.TAG)
-        if self._is_external:
-            self.scalers = MP3UserRatingStorageStyle._KNOWN_EXTERNAL_SCALERS
-        else:
-            self.scalers = [Mp3BeetsScaler()]
+        # if self._is_external:
+        self.scalers = MP3UserRatingStorageStyle._KNOWN_EXTERNAL_SCALERS
+        # else:
+        #     self.scalers = [Mp3BeetsScaler()]
 
     def get(self, mutagen_file):
         # Create a map of all our email -> rating entries
