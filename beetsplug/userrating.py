@@ -66,6 +66,7 @@ class UserRatingsPlugin(plugins.BeetsPlugin):
         # Given the complexity of the storage style implementations, I
         # find it handy to allow them to do unified logging.
         userrating_field = mediafile.MediaField(
+            AmarokRatingStorageStyle(_log=self._log, _is_external=False),
             MP3UserRatingStorageStyle(_log=self._log, _is_external=False),
             UserRatingStorageStyle(_log=self._log, _is_external=False),
             ASFRatingStorageStyle(_log=self._log, _is_external=False),
@@ -73,6 +74,7 @@ class UserRatingsPlugin(plugins.BeetsPlugin):
         )
 
         externalrating_field = mediafile.MediaField(
+            AmarokRatingStorageStyle(_log=self._log, _is_external=True),
             MP3UserRatingStorageStyle(_log=self._log, _is_external=True),
             UserRatingStorageStyle(_log=self._log, _is_external=True),
             ASFRatingStorageStyle(_log=self._log, _is_external=True),
@@ -245,6 +247,35 @@ class MP3UserRatingStorageStyle(mediafile.MP3StorageStyle):
     def set_list(self, mutagen_file, values):
         raise NotImplementedError(u'MP3 Rating storage does not support lists')
 
+class AmarokRatingStorageStyle(mediafile.StorageStyle):
+    """
+    A codec for user ratings in FLAC files using the Amarok storage style
+    format which is FMPS_RATING=0-1
+    """
+
+    TAG = 'FMPS_RATING'
+
+    def __init__(self, **kwargs):
+        self._log = kwargs.get('_log')
+        self._is_external = kwargs.get('_is_external')
+        super(AmarokRatingStorageStyle, self).__init__(self.TAG)
+
+    def get(self, mutagen_file):
+        if mutagen_file.tags.get(self.TAG) is None:
+            return None
+
+        return int(float(mutagen_file.get(self.TAG)[0]) * 10)
+
+    def get_list(self, mutagen_file):
+        raise NotImplementedError(u'UserRating storage does not support lists')
+
+    def set(self, mutagen_file, value):
+        if value is not None and 'audio/flac' in mutagen_file.mime:
+            val = value / 10
+            mutagen_file["FMPS_RATING"] = "%.1f" % val
+
+    def set_list(self, mutagen_file, values):
+        raise NotImplementedError(u'UserRating storage does not support lists')
 
 class UserRatingStorageStyle(mediafile.StorageStyle):
     """
