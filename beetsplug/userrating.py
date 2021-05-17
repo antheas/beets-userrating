@@ -11,7 +11,9 @@
 # The above copyright notice and this permission notice shall be
 # included in all copies or substantial portions of the Software.
 
+import glob
 import os
+import time
 
 import mediafile
 from beets import plugins, ui
@@ -227,6 +229,15 @@ class UserRatingsPlugin(plugins.BeetsPlugin):
         if not os.path.exists(rating_dir):
             os.makedirs(rating_dir)
 
+        # If the file has %s use a timestamp
+        if "%s" in str(rating_file):
+            old_files = glob.glob(rating_file % b"*")
+            if len(old_files):
+                # Remove up to one file to avoid surprises
+                os.remove(old_files[0])
+            rating_file = rating_file % bytearray(str(int(time.time())), "utf-8")
+
+
         ratings = {}
         for item in lib.items(""):
             # Grab rating
@@ -242,7 +253,7 @@ class UserRatingsPlugin(plugins.BeetsPlugin):
                 ratings[item_path] = userrating
 
         # Write ratings to rating file
-        with open(syspath(rating_file), 'wb') as f:
+        with open(rating_file, 'wb') as f:
             for fn, rating in ratings.items():
                 if self.config['forward_slash'].get():
                     fn = path_as_posix(fn)

@@ -74,3 +74,15 @@ userrating:
 And then running `beet ratingsfile`.
 The file will also be updated automatically when the database changes.
 The playlist will have paths relative to the file.
+
+By including `%s` in the filename it will be replaced by a timestamp.
+The plugin will attempt to delete up to one old file that matches the pattern
+(`~/Music/*` will delete a random file, so prefix and suffix `%s`).
+Use `%s` if in your usecase you need to know if the file has been updated.
+Poweramp, for example, will only import new ratings if the playlist is new,
+so your ratings will always be synced.
+However, this will also cause the ratings you made in the app to be overwritten.
+```
+userrating:
+    ratings_file: '~/Music/all.%s.m3u8'
+```
