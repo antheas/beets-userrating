@@ -23,7 +23,7 @@ from beets.library import Item
 from beets.util import (bytestring_path, mkdirall, normpath, path_as_posix,
                         sanitize_path, syspath)
 
-from .rating_styles import (AmarokRatingStorageStyle, ASFRatingStorageStyle,
+from .rating_styles import (AmarokRatingStorageStyle, ASFRatingStorageStyle, DefaultValueStorageStyle,
                             MP3UserRatingStorageStyle, UserRatingStorageStyle)
 
 
@@ -75,6 +75,7 @@ class UserRatingsPlugin(plugins.BeetsPlugin):
             MP3UserRatingStorageStyle(_log=self._log, _is_external=False),
             UserRatingStorageStyle(_log=self._log, _is_external=False),
             ASFRatingStorageStyle(_log=self._log, _is_external=False),
+            DefaultValueStorageStyle(_log=self._log, _is_external=True),
             out_type=int
         )
 
@@ -83,6 +84,7 @@ class UserRatingsPlugin(plugins.BeetsPlugin):
             MP3UserRatingStorageStyle(_log=self._log, _is_external=True),
             UserRatingStorageStyle(_log=self._log, _is_external=True),
             ASFRatingStorageStyle(_log=self._log, _is_external=True),
+            DefaultValueStorageStyle(_log=self._log, _is_external=True),
             out_type=int
         )
 
@@ -97,6 +99,9 @@ class UserRatingsPlugin(plugins.BeetsPlugin):
         if self.config['ratings_file'].get():
             self.register_listener(
                 "database_change", lambda lib, model: self.register_write_listener())
+
+    def valid_rating(self, rating):
+        return rating is not None and rating != 0
 
     # We do present a command, though it doesn't do anything as yet
     def commands(self):
@@ -185,8 +190,8 @@ class UserRatingsPlugin(plugins.BeetsPlugin):
         self._log.debug(u'Found rating value "{0}"', rating)
         imported_rating = item.externalrating if 'externalrating' in item else None
         self._log.debug(u'Found external rating value "{0}"', imported_rating)
-        if imported_rating is not None:
-            if rating is None or opts.overwrite:
+        if self.valid_rating(imported_rating):
+            if not self.valid_rating(rating) or opts.overwrite:
                 item.userrating = int(imported_rating)
                 if should_write and item.try_write():
                     item.store()
@@ -201,7 +206,7 @@ class UserRatingsPlugin(plugins.BeetsPlugin):
         # Get any rating already in the file
         rating = item.userrating if 'userrating' in item else None
         self._log.debug(u'Found rating value "{0}"', rating)
-        if not rating or opts.overwrite:
+        if not self.valid_rating(rating) or opts.overwrite:
             item['userrating'] = int(opts.update)
             if opts.sync or opts.all:
                 item['externalrating'] = int(opts.update)

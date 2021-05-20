@@ -160,3 +160,25 @@ class ASFRatingStorageStyle(mediafile.ASFStorageStyle):
 
     def set_list(self, mutagen_file, values):
         raise NotImplementedError(u'MP3 Rating storage does not support lists')
+
+
+class DefaultValueStorageStyle(mediafile.StorageStyle):
+    """
+    Range queries don't work if value is None. Temp fix is to set the default
+    value as zero.
+    """
+
+    def __init__(self, **kwargs):
+        super(DefaultValueStorageStyle, self).__init__(u'')
+
+    def get(self, mutagen_file):
+        return 0
+
+    def get_list(self, mutagen_file):
+        raise NotImplementedError(u'UserRating storage does not support lists')
+
+    def set(self, mutagen_file, value):
+        pass
+
+    def set_list(self, mutagen_file, values):
+        raise NotImplementedError(u'UserRating storage does not support lists')
